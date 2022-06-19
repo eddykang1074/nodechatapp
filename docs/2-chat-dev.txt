@@ -1,4 +1,8 @@
 ㅁWebSocket 기반 채팅 개발순서
+GitHub 하기주소를 통해 샘플소스 전체를 다운로드 받아 볼수 있습니다
+https://github.com/eddykang1074/nodechatapp.git
+
+
 
 1)Express Project에 socket.io 노드 팩키지를 추가설치한다.
 -터미널창 영역에서 하기 명령어를 실행합니다.
