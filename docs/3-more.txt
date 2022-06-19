@@ -1,0 +1,37 @@
+
+1)호출주소
+
+-웹어플리케이션 기본주소 
+http://localhost:3000/
+
+
+-기본채팅 주소 
+http://localhost:3000/chat/
+
+
+-그룹채팅 호출주소 
+http://localhost:3000/groupchat
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

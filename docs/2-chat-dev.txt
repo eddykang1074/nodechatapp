@@ -1,0 +1,398 @@
+ㅁWebSocket 기반 채팅 개발순서
+
+1)Express Project에 socket.io 노드 팩키지를 추가설치한다.
+-터미널창 영역에서 하기 명령어를 실행합니다.
+
+npm i socket.io
+
+
+
+2)프로젝트 Root에 socket.js 파일을 생성하고 서버 소켓 기본 구현코드를 작성한다.
+-VS 탐색기 영역에서 프로젝트명에 마우스 오버 후 오른쪾에 새파일 아이콘 클릭
+-파일명  socket.js 로 입력한다.
+--socket.js 모듈내에 서버소켓 구현 코드를 추가하고 저장한다.
+
+//socket.io 팩키지 참조 
+const SocketIO = require("socket.io");
+
+//socket.js모듈 기능정의 
+module.exports =(server)=>{
+
+    //express서버와 socket.io객체 연결 
+    const io = SocketIO(server,{path:"/socket.io"});
+
+
+    //socket.io connection 이벤트 정의 추가
+    //웹브라우저와 웹서버(express)간 소켓통신 연결이 완료되면 발생하는 connection 이벤트 기능정의 
+    //웹브라우저와 웹서버가 연결된상태 발생하는 모든 기능을 콜백함수안에서 구현한다.
+    io.on("connection",(socket)=>{
+
+
+        //브라우저에서 호출되는 서버측 기능1
+        //기능이름은 임으로적으로 정의하며 해당 기능이 호출될때 콜백함수가 실행된다.
+        //콜백함수가 호출될떄 브라우저에서 전달한 값을 파라메터로 수신받는다.
+        socket.on("broadcast",function(msg){
+
+            //브라우저에서 전송된 msg데이터를 현재 연결된 모든 사용자 브라우저에게 전송한다.
+            //receiveAll은 브라우저에서 서버로부터 전송된 메시지를 받을 기능명이다.
+            io.emit("receiveAll",msg);
+
+            //socket.broadcast.emit("receive",msg);
+        });
+
+
+    });
+}
+
+
+
+
+3)프로젝트 루트내 bin폴더내 www 파일에 socket.io 설정을 추가한다.  
+-자세한 내용은 GitHub샘플 참조바랍니다.
+-
+
+//웹소켓 모듈추가
+const webSocket = require("../socket");
+
+
+
+
+//웹소켓 express서버와 연결처리
+webSocket(server);
+
+
+
+
+4)채팅화면(뷰파일)을 MVC패턴으로 구현한다.
+
+-라우팅파일과 라우팅 메소드를 구현한다. 
+ㄴroutes\index.js 내에 관련 라우팅 메소드를 구현한다. 
+
+//모든 사용자 대상 채팅
+//호출주소형식: http://localhost:3000/chat
+router.get('/chat', function(req, res, next) {
+  res.render('chat');
+});
+
+
+
+//그룹 채팅-지정채팅방 기반 채팅
+//호출주소형식: http://localhost:3000/groupchat
+router.get('/groupchat', function(req, res, next) {
+  res.render('groupchat');
+});
+
+
+
+-채팅화면 뷰파일을 생성한다.
+ㄴviews폴더내에 오른쪽 마우스 클릭 파일추가 chat.ejs 파일과 groupchat.ejs파일을 생성한다. 
+
+
+-채팅화면 뷰파일에 socket.io 통신용 클라이언트 자바스크립트 라이브러리를 참조한다.
+ㄴviews\chat.ejs 와 views\groupchat.ejs 파일내에 관련코드를 생성한다.
+
+==============views\chat.ejs 소스 전체================ 
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>모든연결사용자간 채팅</title>
+</head>
+
+<body>
+
+    <h1>모든 연결사용자간 채팅</h1>
+    채팅 닉네임:<input type="text" id="nickname" value="창훈"><br>
+    전송 메시지:<input type="text" id="message" value=""><br>
+    <input type="button" id="btnSend" value="전송"><br>
+
+    <hr>
+    <ul id="chatHistory">
+        <!-- <li>창훈:수신된 채팅메시지입니다.1</li>
+        <li>미선:수신된 채팅메시지입니다.2</li> -->
+    </ul>
+
+
+    <!-- jquery cdn 라이브러리 참조  -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- socket.io javascript library 참조  -->
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <script>
+
+    //클라이언트(웹브라우저) 서버 연결 소켓 객체 정의 
+    var socket = io.connect('/');
+
+    //전송버튼 클릭시 사용자 입력메시지를 서버에 특정 이벤트 기능으로 전송한다.
+    $("#btnSend").click(function(){
+
+        //입력메시지
+        var msg = $("#message").val();
+
+        //대화명 추출
+        var nickName = $("#nickname").val();
+
+        //서버로 전송할 최종 메시지
+        var sendMsg = `${nickName}:${msg}`;
+
+        //테스트CASE1: 한개의 파라메터를 서버소켓 메소드로 전달하기 
+        //서버측의 socket.js파일내 정의된 특정기능으로 메시지를 전송한다.
+        //메시지 전송시에는 socket.emit("서버측수신기능명",전송파라메터 데이터)메소드를 이용한다.
+        socket.emit("broadcast",sendMsg);
+
+        //테스트CASE2:여러개의 파라메터를 서버소켓 메소드로 전달하기 
+        //socket.emit("test1",sendMsg,"테스트 파라메터2");
+
+        //테스트CASE3: json 데이터를 서버소켓 메소드로 전송하기 
+        //var data = {nickName,msg};
+        //json 데이터를 값으로 전송한다.
+        //socket.emit("test2",data);
+
+    });
+
+
+    //테스트CASE1: 클라이언트측 서버 소켓 리스너 이벤트 수신기1
+    //서버에서 보내준 메시지를 수신하는 클라이언트 메시지 수신 이벤트 정의 
+    //서버에서 receiveAll 이벤트 수신기로 보냈으니 클라이언트에는 해당 이벤트 수신기이름이 정의되어 있어야한다. 
+    //서버로부터 메시지를 수신하려면 socket.on("수신기이벤트명",function(수신데이터매개변수))
+    socket.on("receiveAll",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+
+    //테스트CASE2: 클라이언트측 서버 소켓 리스너 이벤트 수신기2
+    //서버에서 문자열 2개 파라메터를 수신하는 예시
+    socket.on("receive1",function(receiveMsg1,receiveMsg2){
+        $("#chatHistory").append(`<li>${receiveMsg1}-${receiveMsg2}</li>`);
+    });
+
+    //테스트CASE3: 클라이언트측 서버 소켓 리스너 이벤트 수신기3
+    //json데이터로 서버에서 데이터를 수신하는 예제
+    socket.on("receive2",function(data){
+        $("#chatHistory").append(`<li>${data.nickName}:${data.msg}</li>`);
+    });
+
+    
+
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+==============views\groupchat.ejs 소스 전체================ 
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>그룹 채팅</title>
+</head>
+
+<body>
+
+    <h1>그룹 사용자간 채팅</h1>
+    <p>
+        step1:채팅방에 입장합니다.<br>
+        step2:메시지를 입력하고 전송합니다.<br>
+        step3:해당채팅방 입장 사용자간 다자간 채팅이 이루어집니다.
+    </p>
+    채팅방이름:<input type="text" id="roomid" value="room1"><br>
+    <input type="button" id="btnEntry" value="입장"><br><br>
+
+    채팅 닉네임:<input type="text" id="nickname" value="창훈"><br>
+    전송 메시지:<input type="text" id="message" value=""><br><input type="button" id="btnSend" value="전송"><br>
+
+    <hr>
+    <ul id="chatHistory">
+        <!-- <li>창훈:수신된 채팅메시지입니다.1</li>
+        <li>미선:수신된 채팅메시지입니다.2</li> -->
+    </ul>
+
+
+    <!-- jquery cdn 라이브러리 참조  -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- socket.io javascript library 참조  -->
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <script>
+
+    //클라이언트(웹브라우저) 서버 연결 소켓 객체 정의 
+    var socket = io.connect('/');
+
+    //채팅방 입장요청하기 
+    $("#btnEntry").click(function(){
+        var roomid = $("#roomid").val();
+        socket.emit("entry",roomid);
+    });
+
+
+    $("#btnSend").click(function(){
+        var roomid = $("#roomid").val();
+        var msg = $("#message").val();
+        var nickName = $("#nickname").val();
+        var sendMsg = `${nickName}:${msg}`;
+        
+        //그룹메시징 발송
+        socket.emit("groupmsg",roomid,sendMsg);
+    });
+
+    socket.on("receiveAll",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+    //채팅방 입장완료 메시지 수신기
+    socket.on("entryok",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+    //그룹채팅 메시지 수신처리
+    socket.on("receiveGroupMsg",function(roomid,receiveMsg){
+        $("#chatHistory").append(`<li>${roomid}:${receiveMsg}</li>`);
+    });
+
+    </script>
+</body>
+</html>
+
+
+
+
+
+5)socket.js에 소켓 프로그래밍을 구현한다.
+-루트에 서버측 소켓 구현 모듈파일인 socket.js내 모든 사용자간 채팅 및 그룹채팅 관련 기능을 구현한다.
+-채팅화면과 통신하는 서버측 소켓 통신 기능을 구현한다.
+
+
+==============socket.js 전체 소스=================
+
+//socket.io 팩키지 참조 
+const SocketIO = require("socket.io");
+
+//socket.js모듈 기능정의 
+module.exports =(server)=>{
+
+    //express서버와 socket.io객체 연결 
+    const io = SocketIO(server,{path:"/socket.io"});
+
+
+    //socket.io connection 이벤트 정의 추가
+    //웹브라우저와 웹서버(express)간 소켓통신 연결이 완료되면 발생하는 connection 이벤트 기능정의 
+    //웹브라우저와 웹서버가 연결된상태 발생하는 모든 기능을 콜백함수안에서 구현한다.
+    io.on("connection",(socket)=>{
+
+
+        //전체채팅: 테스트CASE1
+        //브라우저에서 호출되는 서버측 기능1
+        //기능이름은 임으로적으로 정의하며 해당 기능이 호출될때 콜백함수가 실행된다.
+        //콜백함수가 호출될떄 브라우저에서 전달한 값을 파라메터로 수신받는다.
+        socket.on("broadcast",function(msg){
+            //브라우저에서 전송된 msg데이터를 현재 연결된 모든 사용자 브라우저에게 전송한다.
+            //receiveAll은 브라우저에서 서버로부터 전송된 메시지를 받을 기능명이다.
+            io.emit("receiveAll",msg);
+        });
+
+
+        //전체채팅: 테스트CASE2
+        //샘플용 서버 수신기 - test1 기능정의 
+        socket.on("test1",function(param1,param2){
+            //현재 웹서버에 연결된 모든사용자에게 receive1 수신기로 param1 값을 전송함
+            io.emit("receive1",param1,param2);
+        });
+
+
+        //전체채팅: 테스트CASE3
+        //샘플용 서버 수신기 - test2 기능정의 
+        socket.on("test2",function(jsonData){
+            //현재 웹서버에 연결된 모든사용자에게 receive1 수신기로 param1 값을 전송함
+            io.emit("receive2",jsonData);
+        });
+
+
+
+
+        //그룹채팅: 채팅방 입장하기 
+        //그룹채팅 채팅방 입장하기 
+        socket.on("entry",function(roomId){
+            
+            //채팅방 사용자 입장처리하기 
+            socket.join(roomId);
+
+            //호출한 사용자에게만 메시지를 전송한다. socket.emit("수신이벤트명",전송메시지)
+            socket.emit("entryok","채팅방 입장완료!!!");
+        });
+
+        
+        //그룹채팅: 채팅방 클라이언트 메시지 수신 및 클라이언트로 발신처리하기 
+        //그룹 메시징 수신 및 발송
+        socket.on("groupmsg",function(roomId,msg){
+
+            //그룹채팅방 사용자에게만 메시지를 발송한다.
+            //서버에 연결된 모든사용자가 아닌 지정 채팅방에 입장한 모든사용자에게 
+            //메시지를 보낼떄는 io.to(채팅방아이디값).emit()
+            io.to(roomId).emit("receiveGroupMsg",roomId,msg);
+        });
+
+        
+
+
+    });
+}
+
+
+
+
+
+6)노드 채팅 어플리케이션 실행하고 기능확인하기 
+-터미널에서 npm start를 실행한다.
+-웹브라우저에서 각각의 웹페이지를 호출한다. 
+
+
+-기본채팅 주소
+-웹브라우저 탭을 두세개 오픈하고 대화명을 각각 변경하고 메시지를 입력 전송하면 탭의 사용자간 채팅이 이루어지는지 확인한다. 
+http://localhost:3000/chat/
+
+
+
+-그룹채팅 호출주소 
+-웹브라우저 탭을 두세개 오픈하고 채널명을 동일하게 한후 입장한다.
+-대화명을 각각 변경하고 메시지를 입력 전송하면 탭의 채널 사용자간 채팅이 이루어지는지 확인한다.
+
+http://localhost:3000/groupchat
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>그룹 채팅</title>
+</head>
+
+<body>
+
+    <h1>그룹 사용자간 채팅</h1>
+    <p>
+        step1:채팅방에 입장합니다.<br>
+        step2:메시지를 입력하고 전송합니다.<br>
+        step3:해당채팅방 입장 사용자간 다자간 채팅이 이루어집니다.
+    </p>
+    채팅방이름:<input type="text" id="roomid" value="room1"><br>
+    <input type="button" id="btnEntry" value="입장"><br><br>
+
+    채팅 닉네임:<input type="text" id="nickname" value="창훈"><br>
+    전송 메시지:<input type="text" id="message" value=""><br><input type="button" id="btnSend" value="전송"><br>
+
+    <hr>
+    <ul id="chatHistory">
+        <!-- <li>창훈:수신된 채팅메시지입니다.1</li>
+        <li>미선:수신된 채팅메시지입니다.2</li> -->
+    </ul>
+
+
+    <!-- jquery cdn 라이브러리 참조  -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- socket.io javascript library 참조  -->
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <script>
+
+    //클라이언트(웹브라우저) 서버 연결 소켓 객체 정의 
+    var socket = io.connect('/');
+
+    //채팅방 입장요청하기 
+    $("#btnEntry").click(function(){
+        var roomid = $("#roomid").val();
+        socket.emit("entry",roomid);
+    });
+
+
+    $("#btnSend").click(function(){
+        var roomid = $("#roomid").val();
+        var msg = $("#message").val();
+        var nickName = $("#nickname").val();
+        var sendMsg = `${nickName}:${msg}`;
+        
+        //그룹메시징 발송
+        socket.emit("groupmsg",roomid,sendMsg);
+    });
+
+    socket.on("receiveAll",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+    //채팅방 입장완료 메시지 수신기
+    socket.on("entryok",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+    //그룹채팅 메시지 수신처리
+    socket.on("receiveGroupMsg",function(roomid,receiveMsg){
+        $("#chatHistory").append(`<li>${roomid}:${receiveMsg}</li>`);
+    });
+
+    </script>
+</body>
+</html>

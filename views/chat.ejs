@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>모든연결사용자간 채팅</title>
+</head>
+
+<body>
+
+    <h1>모든 연결사용자간 채팅</h1>
+    채팅 닉네임:<input type="text" id="nickname" value="창훈"><br>
+    전송 메시지:<input type="text" id="message" value=""><br>
+    <input type="button" id="btnSend" value="전송"><br>
+
+    <hr>
+    <ul id="chatHistory">
+        <!-- <li>창훈:수신된 채팅메시지입니다.1</li>
+        <li>미선:수신된 채팅메시지입니다.2</li> -->
+    </ul>
+
+
+    <!-- jquery cdn 라이브러리 참조  -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!-- socket.io javascript library 참조  -->
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <script>
+
+    //클라이언트(웹브라우저) 서버 연결 소켓 객체 정의 
+    var socket = io.connect('/');
+
+    //전송버튼 클릭시 사용자 입력메시지를 서버에 특정 이벤트 기능으로 전송한다.
+    $("#btnSend").click(function(){
+
+        //입력메시지
+        var msg = $("#message").val();
+
+        //대화명 추출
+        var nickName = $("#nickname").val();
+
+        //서버로 전송할 최종 메시지
+        var sendMsg = `${nickName}:${msg}`;
+
+        //테스트CASE1: 한개의 파라메터를 서버소켓 메소드로 전달하기 
+        //서버측의 socket.js파일내 정의된 특정기능으로 메시지를 전송한다.
+        //메시지 전송시에는 socket.emit("서버측수신기능명",전송파라메터 데이터)메소드를 이용한다.
+        socket.emit("broadcast",sendMsg);
+
+        //테스트CASE2:여러개의 파라메터를 서버소켓 메소드로 전달하기 
+        //socket.emit("test1",sendMsg,"테스트 파라메터2");
+
+        //테스트CASE3: json 데이터를 서버소켓 메소드로 전송하기 
+        //var data = {nickName,msg};
+        //json 데이터를 값으로 전송한다.
+        //socket.emit("test2",data);
+
+    });
+
+
+    //테스트CASE1: 클라이언트측 서버 소켓 리스너 이벤트 수신기1
+    //서버에서 보내준 메시지를 수신하는 클라이언트 메시지 수신 이벤트 정의 
+    //서버에서 receiveAll 이벤트 수신기로 보냈으니 클라이언트에는 해당 이벤트 수신기이름이 정의되어 있어야한다. 
+    //서버로부터 메시지를 수신하려면 socket.on("수신기이벤트명",function(수신데이터매개변수))
+    socket.on("receiveAll",function(receiveMsg){
+        $("#chatHistory").append(`<li>${receiveMsg}</li>`);
+    });
+
+
+    //테스트CASE2: 클라이언트측 서버 소켓 리스너 이벤트 수신기2
+    //서버에서 문자열 2개 파라메터를 수신하는 예시
+    socket.on("receive1",function(receiveMsg1,receiveMsg2){
+        $("#chatHistory").append(`<li>${receiveMsg1}-${receiveMsg2}</li>`);
+    });
+
+    //테스트CASE3: 클라이언트측 서버 소켓 리스너 이벤트 수신기3
+    //json데이터로 서버에서 데이터를 수신하는 예제
+    socket.on("receive2",function(data){
+        $("#chatHistory").append(`<li>${data.nickName}:${data.msg}</li>`);
+    });
+
+    
+
+    </script>
+</body>
+</html>
